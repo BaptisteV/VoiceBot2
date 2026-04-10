@@ -3,6 +3,7 @@ using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using VoiceBot2.Core;
 using VoiceBot2.Core.Abstractions;
+using Whisper.net.Logger;
 
 var host = Host.CreateDefaultBuilder(args)
     .ConfigureServices(services =>
@@ -11,6 +12,7 @@ var host = Host.CreateDefaultBuilder(args)
     })
     .ConfigureLogging(l =>
     {
+        LogProvider.AddConsoleLogging(WhisperLogLevel.Debug);
         l.AddSimpleConsole(s =>
         {
             s.IncludeScopes = false;
@@ -18,7 +20,7 @@ var host = Host.CreateDefaultBuilder(args)
             s.TimestampFormat = "[HH:mm:ss:fff] ";
         })
         .AddDebug()
-        .SetMinimumLevel(LogLevel.Trace);
+        .SetMinimumLevel(LogLevel.Debug);
     })
     .Build();
 
@@ -27,11 +29,22 @@ var pipeline = scope.ServiceProvider.GetRequiredService<ISpeechPipeline>();
 var audio = scope.ServiceProvider.GetRequiredService<IAudioSource>();
 var logger = scope.ServiceProvider.GetRequiredService<ILogger<Program>>();
 
-audio.Start();
-pipeline.Start();
 
-logger.LogInformation("Press ENTER to stop...");
-Console.ReadLine();
+var lifetime = scope.ServiceProvider.GetRequiredService<IHostApplicationLifetime>();
+lifetime.ApplicationStarted.Register(() =>
+{
+    logger.LogInformation("Starting...");
+    audio.Start();
+    pipeline.Start();
+    logger.LogInformation("Started");
+});
 
-pipeline.Stop();
-audio.Stop();
+lifetime.ApplicationStopping.Register(() =>
+{
+    logger.LogInformation("Stopping");
+    pipeline.Stop();
+    audio.Stop();
+    logger.LogInformation("Stopped");
+});
+
+await host.RunAsync();

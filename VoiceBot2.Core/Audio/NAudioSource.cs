@@ -9,8 +9,7 @@ public sealed class NAudioSource : IAudioSource
 {
     private readonly WaveInEvent _waveIn;
 
-    private readonly ISubject<AudioFrame> _subject =
-        Subject.Synchronize(new Subject<AudioFrame>());
+    private readonly ISubject<AudioFrame> _subject = Subject.Synchronize(new Subject<AudioFrame>());
 
     public IObservable<AudioFrame> AudioStream => _subject;
 
@@ -41,6 +40,5 @@ public sealed class NAudioSource : IAudioSource
     {
         _waveIn.Dispose();
         _subject.OnCompleted();
-        //_subject.Dispose();
     }
 }

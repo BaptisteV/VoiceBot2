@@ -107,10 +107,10 @@ public sealed class SpeechPipeline(
         _subscription?.Dispose();
     }
 
-    public void Dispose()
+    public async ValueTask DisposeAsync()
     {
         _subscription?.Dispose();
         _audio.Dispose();
-        _whisper.Dispose();
+        await _whisper.DisposeAsync();
     }
 }

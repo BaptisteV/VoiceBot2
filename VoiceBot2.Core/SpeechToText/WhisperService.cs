@@ -32,19 +32,14 @@ public sealed class WhisperService : ITranscribeService
         return string.Join(" ", result);
     }
 
-    public void Dispose()
-    {
-        _processor?.Dispose();
-    }
-
     public void Load(string modelPath, string language)
     {
         var factory = WhisperFactory.FromPath(modelPath);
 
         _processor = factory.CreateBuilder()
-            .WithPrompt("Transcribe the audio coming from the user's microphone")
-            .WithCarryInitialPrompt(true)
-            //.SplitOnWord()
+            //.WithPrompt("Transcribe the audio coming from the user's microphone")
+            //.WithCarryInitialPrompt(true)
+            .SplitOnWord()
             //.WithNoSpeechThreshold(1.0f)
             .WithLanguage(language)
             //.WithNoContext()
@@ -53,5 +48,10 @@ public sealed class WhisperService : ITranscribeService
             //.WithTemperature(0.2f)
             //.WithSegmentEventHandler(SegHandler)
             .Build();
+    }
+
+    public async ValueTask DisposeAsync()
+    {
+        await _processor!.DisposeAsync();
     }
 }
