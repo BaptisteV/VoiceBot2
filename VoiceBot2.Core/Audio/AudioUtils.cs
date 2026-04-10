@@ -1,4 +1,6 @@
-﻿public static class AudioUtils
+﻿namespace VoiceBot2.Core.Audio;
+
+public static class AudioUtils
 {
     public static bool IsSilence(byte[] buffer, int threshold = 500)
     {

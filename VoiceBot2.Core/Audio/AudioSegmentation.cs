@@ -1,5 +1,8 @@
 ﻿using System.Reactive;
 using System.Reactive.Linq;
+using VoiceBot2.Core.Model;
+
+namespace VoiceBot2.Core.Audio;
 
 public static class AudioSegmentation
 {

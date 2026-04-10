@@ -1,8 +1,11 @@
 ﻿using NAudio.Utils;
 using NAudio.Wave;
+using VoiceBot2.Core.Abstractions;
 using Whisper.net;
 
-public class WhisperService : IDisposable
+namespace VoiceBot2.Core.SpeechToText;
+
+public class WhisperService : IDisposable, ITranscribeService
 {
     private readonly WhisperProcessor _processor;
 

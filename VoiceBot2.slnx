@@ -3,4 +3,5 @@
     <File Path="README.md" />
   </Folder>
   <Project Path="VoiceBot2.Console/VoiceBot2.Console.csproj" Id="ea59641c-d4d2-4010-bb71-48391c16bb40" />
+  <Project Path="VoiceBot2.Core/VoiceBot2.Core.csproj" Id="f12f7da1-b481-4399-a3e9-92641ea97ae2" />
 </Solution>

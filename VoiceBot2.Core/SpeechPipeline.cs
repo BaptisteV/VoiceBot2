@@ -1,8 +1,14 @@
 ﻿using System.Diagnostics;
 using System.Reactive.Concurrency;
 using System.Reactive.Linq;
+using VoiceBot2.Core.Abstractions;
+using VoiceBot2.Core.Audio;
+using VoiceBot2.Core.Model;
+using VoiceBot2.Core.SpeechToText;
 
-public class SpeechPipeline : IDisposable
+namespace VoiceBot2.Core;
+
+public class SpeechPipeline : IDisposable, ISpeechPipeline
 {
     private readonly NAudioSource _audio;
     private readonly WhisperService _whisper;

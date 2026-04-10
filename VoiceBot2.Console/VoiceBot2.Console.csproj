@@ -8,11 +8,7 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="NAudio" Version="2.3.0" />
-    <PackageReference Include="System.Reactive" Version="7.0.0-preview.1" />
-    <PackageReference Include="System.Reactive.Linq" Version="6.1.0" />
-    <PackageReference Include="Whisper.net" Version="1.9.1-preview1" />
-    <PackageReference Include="Whisper.net.AllRuntimes" Version="1.9.1-preview1" />
+    <ProjectReference Include="..\VoiceBot2.Core\VoiceBot2.Core.csproj" />
   </ItemGroup>
 
 </Project>

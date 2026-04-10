@@ -1,7 +1,11 @@
 ﻿using NAudio.Wave;
 using System.Reactive.Subjects;
+using VoiceBot2.Core.Abstractions;
+using VoiceBot2.Core.Model;
 
-public class NAudioSource : IDisposable
+namespace VoiceBot2.Core.Audio;
+
+public class NAudioSource : IDisposable, IAudioSource
 {
     private readonly WaveInEvent _waveIn;
 
