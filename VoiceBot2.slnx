@@ -1,3 +1,6 @@
 <Solution>
+  <Folder Name="/Solution Items/">
+    <File Path="README.md" />
+  </Folder>
   <Project Path="VoiceBot2.Console/VoiceBot2.Console.csproj" Id="ea59641c-d4d2-4010-bb71-48391c16bb40" />
 </Solution>
