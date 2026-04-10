@@ -5,7 +5,6 @@ This is an attempt at a voice controlled AI Agent.
 It handles voice commands using Speech-To-Text.
 Speech-To-Text is based on [Whisper.net](https://github.com/sandrohanea/whisper.net) using the ggml-medium.gguf [Whisper model](https://huggingface.co/ggerganov/whisper.cpp/tree/main)
 
-## Not implemented yet
 Spoken text is then processed, looking for a know command in the following format
 ```
 "OK, <COMMAND> <COMMAND_ARGS>, Stop"

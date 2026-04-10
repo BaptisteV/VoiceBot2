@@ -1,9 +1,11 @@
 ﻿using Microsoft.Extensions.Logging;
 using System.Diagnostics;
 using System.Reactive.Concurrency;
+using System.Reactive.Disposables;
 using System.Reactive.Linq;
 using VoiceBot2.Core.Abstractions;
 using VoiceBot2.Core.Audio;
+using VoiceBot2.Core.Commands;
 using VoiceBot2.Core.Model;
 using VoiceBot2.Core.SpeechToText;
 
@@ -13,18 +15,22 @@ public sealed class SpeechPipeline(
     IAudioSource audio,
     ITranscribeService whisper,
     IAudioSegmenter audioSegmenter,
+    ICommandDetector commandDetector,
+    ICommandHandler commandHandler,
     ILogger<SpeechPipeline> logger) : ISpeechPipeline
 {
     private readonly IAudioSource _audio = audio;
     private readonly ITranscribeService _whisper = whisper;
     private readonly IAudioSegmenter _audioSegmenter = audioSegmenter;
+    private readonly ICommandDetector _commandDetector = commandDetector;
+    private readonly ICommandHandler _commandHandler = commandHandler;
     private readonly ILogger<SpeechPipeline> _logger = logger;
 
-    private IDisposable? _subscription;
-
+    private CompositeDisposable? _subscriptions;
     public void Start()
     {
         _logger.LogInformation("Pipeline start");
+
         _whisper.Load(WhisperModels.ModelMedium, "fr");
         _logger.LogInformation("{TranscribeService} loaded", typeof(ITranscribeService).Name);
 
@@ -35,7 +41,7 @@ public sealed class SpeechPipeline(
         var segments = _audioSegmenter.Segment(
             audioStream,
             silenceDuration: TimeSpan.FromMilliseconds(400),
-            maxDuration: TimeSpan.FromSeconds(4));
+            maxDuration: TimeSpan.FromSeconds(5));
 
         var timedSegments = segments
             .Select(chunk => new TimedChunk(chunk, DateTime.UtcNow));
@@ -65,10 +71,18 @@ public sealed class SpeechPipeline(
                     );
                 })
             )
-            .Merge(2);
+            .Merge(2)
+            .Publish()
+            .RefCount();
 
-        _subscription = textStream.Subscribe(
-            x =>
+        // 🔍 Command stream (NEW)
+        var commandStream = _commandDetector.DetectCommands(textStream);
+        var s = _commandHandler.Handlers(commandStream);
+        // 📦 Subscriptions
+        _subscriptions =
+        [
+            // 🧾 Text logging stream
+            textStream.Subscribe(x =>
             {
                 _logger.LogInformation(
                     "TEXT={Text} | QUEUE={QueueDelay}ms | STT={ProcessingTime}ms | E2E={EndToEndLatency}ms",
@@ -77,9 +91,19 @@ public sealed class SpeechPipeline(
                     x.ProcessingTime.TotalMilliseconds.ToString("F0"),
                     x.EndToEndLatency.TotalMilliseconds.ToString("F0")
                 );
-            },
-            ex => _logger.LogError(ex, "ERROR=")
-        );
+            }, ex => _logger.LogError(ex, "TEXT STREAM ERROR")),
+
+            commandStream.Subscribe(cmd =>
+            {
+                _logger.LogInformation("COMMAND DETECTED: {CommandText}", cmd.Source.Result.Text);
+            }, ex => _logger.LogError(ex, "COMMAND STREAM ERROR")),
+
+            s.Subscribe(async (h) =>
+            {
+                await h.Run;
+                _logger.LogInformation("COMMAND HANDLED: {CommandText}", h.Result.Source.Result.Text);
+            }, ex => _logger.LogError(ex, "COMMAND HANDLER ERROR")),
+        ];
     }
 
     private async Task<TranscriptionResult> ProcessChunk(IList<AudioFrame> chunk)
@@ -104,12 +128,12 @@ public sealed class SpeechPipeline(
     public void Stop()
     {
         _logger.LogInformation("Pipeline stopped");
-        _subscription?.Dispose();
+        _subscriptions?.Dispose();
     }
 
     public async ValueTask DisposeAsync()
     {
-        _subscription?.Dispose();
+        _subscriptions?.Dispose();
         _audio.Dispose();
         await _whisper.DisposeAsync();
     }

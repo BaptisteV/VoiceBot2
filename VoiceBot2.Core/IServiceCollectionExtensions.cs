@@ -1,6 +1,7 @@
 ﻿using Microsoft.Extensions.DependencyInjection;
 using VoiceBot2.Core.Abstractions;
 using VoiceBot2.Core.Audio;
+using VoiceBot2.Core.Commands;
 using VoiceBot2.Core.SpeechToText;
 
 namespace VoiceBot2.Core;
@@ -15,6 +16,8 @@ public static class IServiceCollectionExtensions
                 .AddSingleton<IAudioSource, NAudioSource>()
                 .AddSingleton<ITranscribeService, WhisperService>()
                 .AddTransient<IAudioSegmenter, AudioSegmenter>()
+                .AddSingleton<ICommandDetector, BufferedCommandDetector>()
+                .AddSingleton<ICommandHandler, CommandHandler>()
                 .AddSingleton<ISpeechPipeline, SpeechPipeline>();
         }
     }

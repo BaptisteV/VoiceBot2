@@ -3,7 +3,6 @@ using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using VoiceBot2.Core;
 using VoiceBot2.Core.Abstractions;
-using Whisper.net.Logger;
 
 var host = Host.CreateDefaultBuilder(args)
     .ConfigureServices(services =>
@@ -12,7 +11,7 @@ var host = Host.CreateDefaultBuilder(args)
     })
     .ConfigureLogging(l =>
     {
-        LogProvider.AddConsoleLogging(WhisperLogLevel.Debug);
+        // LogProvider.AddConsoleLogging(WhisperLogLevel.Debug);
         l.AddSimpleConsole(s =>
         {
             s.IncludeScopes = false;
