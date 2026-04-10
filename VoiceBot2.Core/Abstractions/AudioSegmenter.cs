@@ -1,16 +1,19 @@
-﻿using System.Reactive;
+﻿using Microsoft.Extensions.Logging;
+using System.Reactive;
 using System.Reactive.Linq;
+using VoiceBot2.Core.Audio;
 using VoiceBot2.Core.Model;
 
-namespace VoiceBot2.Core.Audio;
+namespace VoiceBot2.Core.Abstractions;
 
-public static class AudioSegmentation
+public class AudioSegmenter(ILogger<AudioSegmenter> logger) : IAudioSegmenter
 {
-    public static IObservable<IList<AudioFrame>> Segment(
+    private readonly ILogger<AudioSegmenter> _logger = logger;
+
+    public IObservable<IList<AudioFrame>> Segment(
         IObservable<AudioFrame> audioStream,
         TimeSpan silenceDuration,
-        TimeSpan maxDuration,
-        Action<string> log)
+        TimeSpan maxDuration)
     {
         var shared = audioStream.Publish().RefCount();
 
@@ -31,6 +34,6 @@ public static class AudioSegmentation
             .Buffer(flushSignal)
             .Where(chunk => chunk.Count > 0)
             .Do(chunk =>
-                log?.Invoke($"[SEGMENT] {chunk.Count} frames"));
+                _logger.LogInformation("[SEGMENT] {ChunkCount} frames", chunk.Count));
     }
 }

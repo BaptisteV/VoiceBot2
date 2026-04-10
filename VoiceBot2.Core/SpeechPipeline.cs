@@ -1,4 +1,5 @@
-﻿using System.Diagnostics;
+﻿using Microsoft.Extensions.Logging;
+using System.Diagnostics;
 using System.Reactive.Concurrency;
 using System.Reactive.Linq;
 using VoiceBot2.Core.Abstractions;
@@ -10,27 +11,31 @@ namespace VoiceBot2.Core;
 
 public sealed class SpeechPipeline(
     IAudioSource audio,
-    ITranscribeService whisper) : ISpeechPipeline
+    ITranscribeService whisper,
+    IAudioSegmenter audioSegmenter,
+    ILogger<SpeechPipeline> logger) : ISpeechPipeline
 {
     private readonly IAudioSource _audio = audio;
     private readonly ITranscribeService _whisper = whisper;
+    private readonly IAudioSegmenter _audioSegmenter = audioSegmenter;
+    private readonly ILogger<SpeechPipeline> _logger = logger;
 
-    private IDisposable _subscription;
+    private IDisposable? _subscription;
 
     public void Start()
     {
-        Console.WriteLine("Pipeline start");
+        _logger.LogInformation("Pipeline start");
         _whisper.Load(WhisperModels.ModelMedium, "fr");
+        _logger.LogInformation("{TranscribeService} loaded", typeof(ITranscribeService).Name);
 
         var audioStream = _audio.AudioStream
             .Publish()
             .RefCount();
 
-        var segments = AudioSegmentation.Segment(
+        var segments = _audioSegmenter.Segment(
             audioStream,
             silenceDuration: TimeSpan.FromMilliseconds(400),
-            maxDuration: TimeSpan.FromSeconds(4),
-            log: Console.WriteLine);
+            maxDuration: TimeSpan.FromSeconds(4));
 
         var timedSegments = segments
             .Select(chunk => new TimedChunk(chunk, DateTime.UtcNow));
@@ -65,29 +70,30 @@ public sealed class SpeechPipeline(
         _subscription = textStream.Subscribe(
             x =>
             {
-                Console.WriteLine(
-                    $"[TEXT] {x.Result.Text} | " +
-                    $"Queue={x.QueueDelay.TotalMilliseconds:F0}ms | " +
-                    $"STT={x.ProcessingTime.TotalMilliseconds:F0}ms | " +
-                    $"E2E={x.EndToEndLatency.TotalMilliseconds:F0}ms"
+                _logger.LogInformation(
+                    "TEXT={Text} | QUEUE={QueueDelay}ms | STT={ProcessingTime}ms | E2E={EndToEndLatency}ms",
+                    x.Result.Text,
+                    x.QueueDelay.TotalMilliseconds.ToString("F0"),
+                    x.ProcessingTime.TotalMilliseconds.ToString("F0"),
+                    x.EndToEndLatency.TotalMilliseconds.ToString("F0")
                 );
             },
-            ex => Console.WriteLine($"[ERROR] {ex}")
+            ex => _logger.LogError(ex, "ERROR=")
         );
     }
 
     private async Task<TranscriptionResult> ProcessChunk(IList<AudioFrame> chunk)
     {
-        Console.WriteLine($"[STT] Processing chunk ({chunk.Count} frames)");
+        _logger.LogInformation("STT Processing chunk ({ChunckCount} frames)", chunk.Count);
 
         var totalLength = chunk.Sum(f => f.Buffer.Length);
         var buffer = new byte[totalLength];
 
         int offset = 0;
-        foreach (var f in chunk)
+        foreach (var chuckBuffer in chunk.Select(c => c.Buffer))
         {
-            Buffer.BlockCopy(f.Buffer, 0, buffer, offset, f.Buffer.Length);
-            offset += f.Buffer.Length;
+            Buffer.BlockCopy(chuckBuffer, 0, buffer, offset, chuckBuffer.Length);
+            offset += chuckBuffer.Length;
         }
 
         var text = await _whisper.TranscribeAsync(buffer);
@@ -97,7 +103,7 @@ public sealed class SpeechPipeline(
 
     public void Stop()
     {
-        Console.WriteLine("Pipeline stopped");
+        _logger.LogInformation("Pipeline stopped");
         _subscription?.Dispose();
     }
 

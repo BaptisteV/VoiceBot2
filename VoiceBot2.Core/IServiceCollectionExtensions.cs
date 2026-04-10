@@ -14,6 +14,7 @@ public static class IServiceCollectionExtensions
             return services
                 .AddSingleton<IAudioSource, NAudioSource>()
                 .AddSingleton<ITranscribeService, WhisperService>()
+                .AddTransient<IAudioSegmenter, AudioSegmenter>()
                 .AddSingleton<ISpeechPipeline, SpeechPipeline>();
         }
     }

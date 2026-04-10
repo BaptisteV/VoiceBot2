@@ -25,11 +25,12 @@ var host = Host.CreateDefaultBuilder(args)
 using var scope = host.Services.CreateScope();
 var pipeline = scope.ServiceProvider.GetRequiredService<ISpeechPipeline>();
 var audio = scope.ServiceProvider.GetRequiredService<IAudioSource>();
+var logger = scope.ServiceProvider.GetRequiredService<ILogger<Program>>();
 
 audio.Start();
 pipeline.Start();
 
-Console.WriteLine("Press ENTER to stop...");
+logger.LogInformation("Press ENTER to stop...");
 Console.ReadLine();
 
 pipeline.Stop();
