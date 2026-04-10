@@ -1,0 +1,33 @@
+﻿using System.Reactive;
+using System.Reactive.Linq;
+
+public static class AudioSegmentation
+{
+    public static IObservable<IList<AudioFrame>> Segment(
+        IObservable<AudioFrame> audioStream,
+        TimeSpan silenceDuration,
+        TimeSpan maxDuration,
+        Action<string> log)
+    {
+        var shared = audioStream.Publish().RefCount();
+
+        var silenceSignal = shared
+            .Select(f => AudioUtils.IsSilence(f.Buffer))
+            .DistinctUntilChanged()
+            .Where(s => s)
+            .Throttle(silenceDuration)
+            .Select(_ => Unit.Default);
+
+        var timeoutSignal = shared
+            .Sample(maxDuration)
+            .Select(_ => Unit.Default);
+
+        var flushSignal = silenceSignal.Merge(timeoutSignal);
+
+        return shared
+            .Buffer(flushSignal)
+            .Where(chunk => chunk.Count > 0)
+            .Do(chunk =>
+                log?.Invoke($"[SEGMENT] {chunk.Count} frames"));
+    }
+}
