@@ -5,27 +5,9 @@ using Whisper.net;
 
 namespace VoiceBot2.Core.SpeechToText;
 
-public class WhisperService : IDisposable, ITranscribeService
+public sealed class WhisperService : ITranscribeService
 {
-    private readonly WhisperProcessor _processor;
-
-    public WhisperService(string modelPath, string language)
-    {
-        var factory = WhisperFactory.FromPath(modelPath);
-
-        _processor = factory.CreateBuilder()
-            .WithPrompt("Transcribe the audio coming from the user's microphone")
-            .WithCarryInitialPrompt(true)
-            //.SplitOnWord()
-            //.WithNoSpeechThreshold(1.0f)
-            .WithLanguage(language)
-            //.WithNoContext()
-            //.WithSingleSegment()
-            //.WithProgressHandler(ProgressHandler)
-            //.WithTemperature(0.2f)
-            //.WithSegmentEventHandler(SegHandler)
-            .Build();
-    }
+    private WhisperProcessor? _processor;
 
     public async Task<string> TranscribeAsync(byte[] pcmData)
     {
@@ -42,7 +24,7 @@ public class WhisperService : IDisposable, ITranscribeService
 
         var result = new List<string>();
 
-        await foreach (var segment in _processor.ProcessAsync(ms))
+        await foreach (var segment in _processor!.ProcessAsync(ms))
         {
             result.Add(segment.Text);
         }
@@ -52,6 +34,24 @@ public class WhisperService : IDisposable, ITranscribeService
 
     public void Dispose()
     {
-        _processor.Dispose();
+        _processor?.Dispose();
+    }
+
+    public void Load(string modelPath, string language)
+    {
+        var factory = WhisperFactory.FromPath(modelPath);
+
+        _processor = factory.CreateBuilder()
+            .WithPrompt("Transcribe the audio coming from the user's microphone")
+            .WithCarryInitialPrompt(true)
+            //.SplitOnWord()
+            //.WithNoSpeechThreshold(1.0f)
+            .WithLanguage(language)
+            //.WithNoContext()
+            //.WithSingleSegment()
+            //.WithProgressHandler(ProgressHandler)
+            //.WithTemperature(0.2f)
+            //.WithSegmentEventHandler(SegHandler)
+            .Build();
     }
 }

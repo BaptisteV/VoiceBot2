@@ -2,6 +2,6 @@
 
 public interface ITranscribeService : IDisposable
 {
-    Task<string> TranscribeAsync(byte[]
-    pcmData);
+    void Load(string modelPath, string language);
+    Task<string> TranscribeAsync(byte[] pcmData);
 }

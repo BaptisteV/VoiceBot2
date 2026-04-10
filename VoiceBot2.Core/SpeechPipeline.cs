@@ -8,22 +8,19 @@ using VoiceBot2.Core.SpeechToText;
 
 namespace VoiceBot2.Core;
 
-public class SpeechPipeline : IDisposable, ISpeechPipeline
+public sealed class SpeechPipeline(
+    IAudioSource audio,
+    ITranscribeService whisper) : ISpeechPipeline
 {
-    private readonly NAudioSource _audio;
-    private readonly WhisperService _whisper;
+    private readonly IAudioSource _audio = audio;
+    private readonly ITranscribeService _whisper = whisper;
 
     private IDisposable _subscription;
 
-    public SpeechPipeline(NAudioSource audio, WhisperService whisper)
-    {
-        _audio = audio;
-        _whisper = whisper;
-    }
-
     public void Start()
     {
-        Console.WriteLine("Pipeline started");
+        Console.WriteLine("Pipeline start");
+        _whisper.Load(WhisperModels.ModelMedium, "fr");
 
         var audioStream = _audio.AudioStream
             .Publish()

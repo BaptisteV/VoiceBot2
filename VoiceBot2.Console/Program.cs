@@ -1,14 +1,30 @@
-﻿using VoiceBot2.Core;
-using VoiceBot2.Core.Audio;
-using VoiceBot2.Core.SpeechToText;
+﻿using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Logging;
+using VoiceBot2.Core;
+using VoiceBot2.Core.Abstractions;
 
-using var audio = new NAudioSource();
-const string modelSmall = @"C:\Users\Bapt\Downloads\ggml-small-fp16.bin";
-const string modelMedium = @"C:\Users\Bapt\Downloads\ggml-medium.bin";
-const string modelTiny = @"C:\Users\Bapt\Downloads\ggml-tiny-fp16.bin";
-using var whisper = new WhisperService(modelMedium, "fr");
+var host = Host.CreateDefaultBuilder(args)
+    .ConfigureServices(services =>
+    {
+        services.AddServices();
+    })
+    .ConfigureLogging(l =>
+    {
+        l.AddSimpleConsole(s =>
+        {
+            s.IncludeScopes = false;
+            s.SingleLine = true;
+            s.TimestampFormat = "[HH:mm:ss:fff] ";
+        })
+        .AddDebug()
+        .SetMinimumLevel(LogLevel.Trace);
+    })
+    .Build();
 
-var pipeline = new SpeechPipeline(audio, whisper);
+using var scope = host.Services.CreateScope();
+var pipeline = scope.ServiceProvider.GetRequiredService<ISpeechPipeline>();
+var audio = scope.ServiceProvider.GetRequiredService<IAudioSource>();
 
 audio.Start();
 pipeline.Start();

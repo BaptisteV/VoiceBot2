@@ -5,7 +5,7 @@ using VoiceBot2.Core.Model;
 
 namespace VoiceBot2.Core.Audio;
 
-public class NAudioSource : IDisposable, IAudioSource
+public sealed class NAudioSource : IAudioSource
 {
     private readonly WaveInEvent _waveIn;
 
