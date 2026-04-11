@@ -3,7 +3,7 @@ using System.Runtime.InteropServices;
 
 namespace VoiceBot2.Maui.Platforms.Windows;
 
-public sealed class HotkeyManager : IDisposable
+public sealed partial class HotkeyManager : IDisposable
 {
     private IntPtr _hookID = IntPtr.Zero;
     private readonly HookProc _proc;
@@ -28,7 +28,7 @@ public sealed class HotkeyManager : IDisposable
         UnhookWindowsHookEx(_hookID);
     }
 
-    private IntPtr SetHook(HookProc proc)
+    private static IntPtr SetHook(HookProc proc)
     {
         using var curProcess = Process.GetCurrentProcess();
         using var curModule = curProcess.MainModule!;
@@ -46,23 +46,17 @@ public sealed class HotkeyManager : IDisposable
             bool isW = vkCode == 0x57;
 
             // Key down
-            if (wParam == (IntPtr)0x0100) // WM_KEYDOWN
+            if (wParam == (IntPtr)0x0100 && ctrl && shift && isW && !_isPressed) // WM_KEYDOWN
             {
-                if (ctrl && shift && isW && !_isPressed)
-                {
-                    _isPressed = true;
-                    HotkeyPressed?.Invoke();
-                }
+                _isPressed = true;
+                HotkeyPressed?.Invoke();
             }
 
             // Key up
-            if (wParam == (IntPtr)0x0101) // WM_KEYUP
+            if (wParam == (IntPtr)0x0101 && _isPressed && isW) // WM_KEYUP
             {
-                if (_isPressed && isW)
-                {
-                    _isPressed = false;
-                    HotkeyReleased?.Invoke();
-                }
+                _isPressed = false;
+                HotkeyReleased?.Invoke();
             }
         }
 
@@ -74,11 +68,10 @@ public sealed class HotkeyManager : IDisposable
         Unregister();
     }
 
-    #region Win32
-
     private delegate IntPtr HookProc(int nCode, IntPtr wParam, IntPtr lParam);
 
     [DllImport("user32.dll")]
+#pragma warning disable SYSLIB1054 // Use 'LibraryImportAttribute' instead of 'DllImportAttribute' to generate P/Invoke marshalling code at compile time
     private static extern IntPtr SetWindowsHookEx(int idHook, HookProc lpfn, IntPtr hMod, uint dwThreadId);
 
     [DllImport("user32.dll")]
@@ -88,11 +81,11 @@ public sealed class HotkeyManager : IDisposable
     [DllImport("user32.dll")]
     private static extern IntPtr CallNextHookEx(IntPtr hhk, int nCode, IntPtr wParam, IntPtr lParam);
 
-    [DllImport("kernel32.dll")]
+    [DllImport("kernel32.dll", CharSet = CharSet.Unicode)]
     private static extern IntPtr GetModuleHandle(string lpModuleName);
 
     [DllImport("user32.dll")]
     private static extern short GetAsyncKeyState(int vKey);
+#pragma warning restore SYSLIB1054 // Use 'LibraryImportAttribute' instead of 'DllImportAttribute' to generate P/Invoke marshalling code at compile time
 
-    #endregion
 }

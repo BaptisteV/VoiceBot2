@@ -6,70 +6,69 @@ using VoiceBot2.Maui.Platforms.Windows;
 #endif
 
 
-namespace VoiceBot2.Maui
-{
-    public static class MauiProgram
-    {
-        public static MauiApp CreateMauiApp()
-        {
-            var builder = MauiApp.CreateBuilder();
-            builder
-                .UseMauiApp<App>()
-                .ConfigureFonts(fonts =>
-                {
-                    fonts.AddFont("OpenSans-Regular.ttf", "OpenSansRegular");
-                    fonts.AddFont("OpenSans-Semibold.ttf", "OpenSansSemibold");
-                });
+namespace VoiceBot2.Maui;
 
-            builder.ConfigureLifecycleEvents(events =>
+public static class MauiProgram
+{
+    public static MauiApp CreateMauiApp()
+    {
+        var builder = MauiApp.CreateBuilder();
+        builder
+            .UseMauiApp<App>()
+            .ConfigureFonts(fonts =>
             {
-#if WINDOWS
-                events.AddWindows(windows =>
-                {
-                    windows.OnWindowCreated(window =>
-                    {
-                        SetupHotkeys();
-                    });
-                });
-#endif
+                fonts.AddFont("OpenSans-Regular.ttf", "OpenSansRegular");
+                fonts.AddFont("OpenSans-Semibold.ttf", "OpenSansSemibold");
             });
 
-            builder.Logging.AddDebug();
-            builder.Logging.SetMinimumLevel(LogLevel.Debug);
-
-            var services = builder.Services;
-            services.AddServices();
-
-            return builder.Build();
-        }
-
-        private static void SetupHotkeys()
+        builder.ConfigureLifecycleEvents(events =>
         {
-            var hotkeyManager = new HotkeyManager();
-
-            hotkeyManager.HotkeyPressed += () =>
+#if WINDOWS
+            events.AddWindows(windows =>
             {
-                MainThread.BeginInvokeOnMainThread(() =>
+                windows.OnWindowCreated(window =>
                 {
-                    if (Shell.Current?.CurrentPage is MainPage page)
-                    {
-                        page.ShowHideWindowCommand.Execute(null);
-                    }
+                    SetupHotkeys();
                 });
-            };
+            });
+#endif
+        });
 
-            hotkeyManager.HotkeyReleased += () =>
+        builder.Logging.AddDebug();
+        builder.Logging.SetMinimumLevel(LogLevel.Debug);
+
+        var services = builder.Services;
+        services.AddServices();
+
+        return builder.Build();
+    }
+
+    private static void SetupHotkeys()
+    {
+        var hotkeyManager = new HotkeyManager();
+
+        hotkeyManager.HotkeyPressed += () =>
+        {
+            MainThread.BeginInvokeOnMainThread(() =>
             {
-                MainThread.BeginInvokeOnMainThread(() =>
+                if (Shell.Current?.CurrentPage is MainPage page)
                 {
-                    if (Shell.Current?.CurrentPage is MainPage page)
-                    {
-                        page.ShowHideWindowCommand.Execute(null);
-                    }
-                });
-            };
+                    page.ShowHideWindowCommand.Execute(null);
+                }
+            });
+        };
 
-            hotkeyManager.Register();
-        }
+        hotkeyManager.HotkeyReleased += () =>
+        {
+            MainThread.BeginInvokeOnMainThread(() =>
+            {
+                if (Shell.Current?.CurrentPage is MainPage page)
+                {
+                    page.ShowHideWindowCommand.Execute(null);
+                }
+            });
+        };
+
+        hotkeyManager.Register();
     }
 }

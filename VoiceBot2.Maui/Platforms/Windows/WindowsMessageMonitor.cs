@@ -2,11 +2,11 @@
 
 namespace VoiceBot2.Maui.Platforms.Windows;
 
-public class WindowsMessageMonitor : IDisposable
+public sealed partial class WindowsMessageMonitor : IDisposable
 {
-    private IntPtr _hwnd;
-    private IntPtr _oldWndProc;
-    private WndProcDelegate _newWndProc;
+    private readonly IntPtr _hwnd;
+    private readonly IntPtr _oldWndProc;
+    private readonly WndProcDelegate _newWndProc;
 
     public event EventHandler<WindowMessageEventArgs>? WindowMessageReceived;
 
@@ -43,10 +43,8 @@ public class WindowsMessageMonitor : IDisposable
     [DllImport("user32.dll")]
 #pragma warning disable SYSLIB1054 // Use 'LibraryImportAttribute' instead of 'DllImportAttribute' to generate P/Invoke marshalling code at compile time
     private static extern IntPtr SetWindowLongPtr(IntPtr hWnd, int nIndex, IntPtr newProc);
-#pragma warning restore SYSLIB1054 // Use 'LibraryImportAttribute' instead of 'DllImportAttribute' to generate P/Invoke marshalling code at compile time
 
     [DllImport("user32.dll")]
-#pragma warning disable SYSLIB1054 // Use 'LibraryImportAttribute' instead of 'DllImportAttribute' to generate P/Invoke marshalling code at compile time
     private static extern IntPtr CallWindowProc(IntPtr lpPrevWndFunc, IntPtr hWnd, int msg, IntPtr wParam, IntPtr lParam);
 #pragma warning restore SYSLIB1054 // Use 'LibraryImportAttribute' instead of 'DllImportAttribute' to generate P/Invoke marshalling code at compile time
 }

@@ -4,12 +4,13 @@
              xmlns:tb="https://notifyicon.com/"
              xmlns:pages="clr-namespace:H.NotifyIcon;assembly=H.NotifyIcon.Maui"
              x:Class="VoiceBot2.Maui.MainPage"
+             xmlns:vm="clr-namespace:VoiceBot2.Maui"
+             x:DataType="vm:MainPage"
              Loaded="ContentPage_Loaded">
 
     <ScrollView>
-        <VerticalStackLayout
-            Padding="30,0"
-            Spacing="25">
+        <VerticalStackLayout Padding="30,0"
+                             Spacing="25">
             <tb:TaskbarIcon IconSource="off.ico"
                             x:Name="TrayIcon"
                             LeftClickCommand="{Binding ShowHideWindowCommand}"
@@ -24,46 +25,46 @@
                     </MenuFlyout>
                 </FlyoutBase.ContextFlyout>
             </tb:TaskbarIcon>
-        <Grid Padding="13,8"
-              RowDefinitions="90,90"
-              ColumnDefinitions="134,*">
+            <Grid Padding="13,8"
+                  RowDefinitions="90,90"
+                  ColumnDefinitions="134,*">
 
-            <!-- Voice label (top full width) -->
-            <Border Grid.Row="0"
-                    Grid.ColumnSpan="2"
-                    Stroke="White"
-                    StrokeThickness="1">
+                <!-- Voice label (top full width) -->
+                <Border Grid.Row="0"
+                        Grid.ColumnSpan="2"
+                        Stroke="White"
+                        StrokeThickness="1">
 
-                <Label Text="Mic input"
-                       TextColor="White"
-                       HorizontalTextAlignment="Center"
-                       VerticalTextAlignment="Center"
-                       FontSize="18" />
-            </Border>
+                    <Label Text="Mic input"
+                           TextColor="White"
+                           HorizontalTextAlignment="Center"
+                           VerticalTextAlignment="Center"
+                           FontSize="18" />
+                </Border>
 
-            <!-- Command type -->
-            <Border Grid.Row="1"
-                    Grid.Column="0"
-                    Stroke="White"
-                    StrokeThickness="1">
+                <!-- Command type -->
+                <Border Grid.Row="1"
+                        Grid.Column="0"
+                        Stroke="White"
+                        StrokeThickness="1">
 
-                <Label Text="Command type"
-                       TextColor="White"
-                       HorizontalTextAlignment="Center"
-                       VerticalTextAlignment="Center" />
-            </Border>
+                    <Label Text="Command type"
+                           TextColor="White"
+                           HorizontalTextAlignment="Center"
+                           VerticalTextAlignment="Center" />
+                </Border>
 
-            <!-- Command args -->
-            <Border Grid.Row="1"
-                    Grid.Column="1"
-                    Stroke="White"
-                    StrokeThickness="1">
+                <!-- Command args -->
+                <Border Grid.Row="1"
+                        Grid.Column="1"
+                        Stroke="White"
+                        StrokeThickness="1">
 
-                <Label Text="Command args"
-                       TextColor="White"
-                       HorizontalTextAlignment="Center"
-                       VerticalTextAlignment="Center" />
-            </Border>
+                    <Label Text="Command args"
+                           TextColor="White"
+                           HorizontalTextAlignment="Center"
+                           VerticalTextAlignment="Center" />
+                </Border>
 
             </Grid>
         </VerticalStackLayout>
