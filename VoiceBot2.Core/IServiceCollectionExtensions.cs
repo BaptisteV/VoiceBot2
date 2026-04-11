@@ -18,6 +18,7 @@ public static class IServiceCollectionExtensions
                 .AddTransient<IAudioSegmenter, AudioSegmenter>()
                 .AddSingleton<ICommandDetector, BufferedCommandDetector>()
                 .AddSingleton<ICommandHandler, CommandHandler>()
+                .AddTransient<ISwitch, Switch>()
                 .AddSingleton<ISpeechPipeline, SpeechPipeline>();
         }
     }

@@ -4,4 +4,5 @@
   </Folder>
   <Project Path="VoiceBot2.Console/VoiceBot2.Console.csproj" Id="ea59641c-d4d2-4010-bb71-48391c16bb40" />
   <Project Path="VoiceBot2.Core/VoiceBot2.Core.csproj" Id="f12f7da1-b481-4399-a3e9-92641ea97ae2" />
+  <Project Path="VoiceBot2.Maui/VoiceBot2.Maui.csproj" Id="800f40ca-e3c2-4f24-95d6-aa08cdb9a5f4" />
 </Solution>

@@ -1,6 +1,6 @@
 ﻿using VoiceBot2.Core.Model;
 
-namespace VoiceBot2.Core.Audio;
+namespace VoiceBot2.Core.Abstractions;
 
 public interface IAudioSegmenter
 {

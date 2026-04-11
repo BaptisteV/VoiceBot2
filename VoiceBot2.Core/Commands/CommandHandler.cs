@@ -1,14 +1,8 @@
 ﻿using Microsoft.Extensions.Logging;
 using System.Reactive.Linq;
+using VoiceBot2.Core.Abstractions;
 
 namespace VoiceBot2.Core.Commands;
-
-public record CommandRunner(Task Run, CommandResult Result);
-
-public interface ICommandHandler
-{
-    IObservable<CommandRunner> Handlers(IObservable<CommandResult> commands);
-}
 
 public class CommandHandler(ILogger<CommandHandler> logger) : ICommandHandler
 {
@@ -38,6 +32,7 @@ public class CommandHandler(ILogger<CommandHandler> logger) : ICommandHandler
 
     private async Task HandleWriteTextCommand(CommandResult cmd)
     {
-        _logger.LogWarning("Simulating text input: {Text}", cmd.Args);
+        var textToWrite = cmd.Args.TrimWithPunctuation();
+        _logger.LogWarning("Simulating text input: {Text}", textToWrite);
     }
 }

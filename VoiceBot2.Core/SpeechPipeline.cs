@@ -4,8 +4,6 @@ using System.Reactive.Concurrency;
 using System.Reactive.Disposables;
 using System.Reactive.Linq;
 using VoiceBot2.Core.Abstractions;
-using VoiceBot2.Core.Audio;
-using VoiceBot2.Core.Commands;
 using VoiceBot2.Core.Model;
 using VoiceBot2.Core.SpeechToText;
 

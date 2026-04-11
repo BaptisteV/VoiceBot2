@@ -1,10 +1,10 @@
 ﻿using Microsoft.Extensions.Logging;
 using System.Reactive;
 using System.Reactive.Linq;
-using VoiceBot2.Core.Audio;
+using VoiceBot2.Core.Abstractions;
 using VoiceBot2.Core.Model;
 
-namespace VoiceBot2.Core.Abstractions;
+namespace VoiceBot2.Core.Audio;
 
 public class AudioSegmenter(ILogger<AudioSegmenter> logger) : IAudioSegmenter
 {
