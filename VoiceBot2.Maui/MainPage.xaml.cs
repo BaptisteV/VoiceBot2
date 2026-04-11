@@ -1,46 +1,18 @@
-﻿using CommunityToolkit.Mvvm.Input;
-using H.NotifyIcon;
-
-namespace VoiceBot2.Maui;
+﻿namespace VoiceBot2.Maui;
 
 public partial class MainPage : ContentPage
 {
-    private bool IsWindowVisible { get; set; } = true;
+    private readonly MainPageViewModel _vm;
 
-    public MainPage()
+    public MainPage(MainPageViewModel vm)
     {
+        _vm = vm;
         InitializeComponent();
-        BindingContext = this;
-    }
-
-    [RelayCommand]
-    public void ShowHideWindow()
-    {
-        var window = Application.Current?.Windows[0];
-        if (window == null)
-        {
-            return;
-        }
-
-        if (IsWindowVisible)
-        {
-            window.Hide();
-        }
-        else
-        {
-            window.Show();
-        }
-        IsWindowVisible = !IsWindowVisible;
-    }
-
-    [RelayCommand]
-    public static void ExitApplication()
-    {
-        Application.Current?.Quit();
+        BindingContext = _vm;
     }
 
     private void ContentPage_Loaded(object? sender, EventArgs e)
     {
-        ShowHideWindow();
+        _vm.ShowHideWindow();
     }
 }

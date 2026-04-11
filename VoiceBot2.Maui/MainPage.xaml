@@ -5,13 +5,13 @@
              xmlns:pages="clr-namespace:H.NotifyIcon;assembly=H.NotifyIcon.Maui"
              x:Class="VoiceBot2.Maui.MainPage"
              xmlns:vm="clr-namespace:VoiceBot2.Maui"
-             x:DataType="vm:MainPage"
+             x:DataType="vm:MainPageViewModel"
              Loaded="ContentPage_Loaded">
 
     <ScrollView>
         <VerticalStackLayout Padding="30,0"
                              Spacing="25">
-            <tb:TaskbarIcon IconSource="off.ico"
+            <tb:TaskbarIcon IconSource="{Binding IconPath}"
                             x:Name="TrayIcon"
                             LeftClickCommand="{Binding ShowHideWindowCommand}"
                             NoLeftClickDelay="True">

@@ -21,6 +21,13 @@ public static class MauiProgram
                 fonts.AddFont("OpenSans-Semibold.ttf", "OpenSansSemibold");
             });
 
+        builder.Logging.AddDebug();
+        builder.Logging.SetMinimumLevel(LogLevel.Debug);
+        var vm = new MainPageViewModel();
+        builder.Services.AddSingleton(vm);
+
+        var services = builder.Services;
+        services.AddServices();
         builder.ConfigureLifecycleEvents(events =>
         {
 #if WINDOWS
@@ -28,22 +35,16 @@ public static class MauiProgram
             {
                 windows.OnWindowCreated(window =>
                 {
-                    SetupHotkeys();
+                    SetupHotkeys(vm);
                 });
             });
 #endif
         });
 
-        builder.Logging.AddDebug();
-        builder.Logging.SetMinimumLevel(LogLevel.Debug);
-
-        var services = builder.Services;
-        services.AddServices();
-
         return builder.Build();
     }
 
-    private static void SetupHotkeys()
+    private static void SetupHotkeys(MainPageViewModel vm)
     {
         var hotkeyManager = new HotkeyManager();
 
@@ -51,10 +52,7 @@ public static class MauiProgram
         {
             MainThread.BeginInvokeOnMainThread(() =>
             {
-                if (Shell.Current?.CurrentPage is MainPage page)
-                {
-                    page.ShowHideWindowCommand.Execute(null);
-                }
+                vm.ShowHideWindowCommand.Execute(null);
             });
         };
 
@@ -62,10 +60,7 @@ public static class MauiProgram
         {
             MainThread.BeginInvokeOnMainThread(() =>
             {
-                if (Shell.Current?.CurrentPage is MainPage page)
-                {
-                    page.ShowHideWindowCommand.Execute(null);
-                }
+                vm.ShowHideWindowCommand.Execute(null);
             });
         };
 
