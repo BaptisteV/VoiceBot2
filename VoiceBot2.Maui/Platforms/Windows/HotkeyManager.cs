@@ -1,21 +1,25 @@
-﻿using System.Diagnostics;
+﻿using Microsoft.Extensions.Logging;
+using System.Diagnostics;
 using System.Runtime.InteropServices;
-
+using static Vanara.PInvoke.Kernel32;
+using static Vanara.PInvoke.User32;
 namespace VoiceBot2.Maui.Platforms.Windows;
 
 public sealed partial class HotkeyManager : IDisposable
 {
-    private IntPtr _hookID = IntPtr.Zero;
+    private SafeHHOOK _hookID = SafeHHOOK.Null;
     private readonly HookProc _proc;
+    private readonly ILogger<HotkeyManager> _logger;
 
     public event Action? HotkeyPressed;
     public event Action? HotkeyReleased;
 
     private bool _isPressed = false;
 
-    public HotkeyManager()
+    public HotkeyManager(ILogger<HotkeyManager> logger)
     {
         _proc = HookCallback;
+        _logger = logger;
     }
 
     public void Register()
@@ -28,14 +32,14 @@ public sealed partial class HotkeyManager : IDisposable
         UnhookWindowsHookEx(_hookID);
     }
 
-    private static IntPtr SetHook(HookProc proc)
+    private static SafeHHOOK SetHook(HookProc proc)
     {
         using var curProcess = Process.GetCurrentProcess();
         using var curModule = curProcess.MainModule!;
-        return SetWindowsHookEx(13, proc, GetModuleHandle(curModule.ModuleName), 0);
+        return SetWindowsHookEx(HookType.WH_KEYBOARD_LL, proc, GetModuleHandle(curModule.ModuleName));
     }
 
-    private IntPtr HookCallback(int nCode, IntPtr wParam, IntPtr lParam)
+    private nint HookCallback(int nCode, IntPtr wParam, IntPtr lParam)
     {
         if (nCode >= 0)
         {
@@ -49,43 +53,24 @@ public sealed partial class HotkeyManager : IDisposable
             if (wParam == (IntPtr)0x0100 && ctrl && shift && isW && !_isPressed) // WM_KEYDOWN
             {
                 _isPressed = true;
+                _logger.LogInformation("Hotkey Ctrl+Shift+W pressed");
                 HotkeyPressed?.Invoke();
             }
 
             // Key up
-            if (wParam == (IntPtr)0x0101 && _isPressed && isW) // WM_KEYUP
+            if (wParam == (IntPtr)0x0101 && ctrl && shift && _isPressed && isW) // WM_KEYUP
             {
                 _isPressed = false;
+                _logger.LogInformation("Hotkey Ctrl+Shift+W released");
                 HotkeyReleased?.Invoke();
             }
         }
 
-        return CallNextHookEx(_hookID, nCode, wParam, lParam);
+        return Vanara.PInvoke.User32.CallNextHookEx(_hookID, nCode, wParam, lParam);
     }
 
     public void Dispose()
     {
         Unregister();
     }
-
-    private delegate IntPtr HookProc(int nCode, IntPtr wParam, IntPtr lParam);
-
-    [DllImport("user32.dll")]
-#pragma warning disable SYSLIB1054 // Use 'LibraryImportAttribute' instead of 'DllImportAttribute' to generate P/Invoke marshalling code at compile time
-    private static extern IntPtr SetWindowsHookEx(int idHook, HookProc lpfn, IntPtr hMod, uint dwThreadId);
-
-    [DllImport("user32.dll")]
-    [return: MarshalAs(UnmanagedType.Bool)]
-    private static extern bool UnhookWindowsHookEx(IntPtr hhk);
-
-    [DllImport("user32.dll")]
-    private static extern IntPtr CallNextHookEx(IntPtr hhk, int nCode, IntPtr wParam, IntPtr lParam);
-
-    [DllImport("kernel32.dll", CharSet = CharSet.Unicode)]
-    private static extern IntPtr GetModuleHandle(string lpModuleName);
-
-    [DllImport("user32.dll")]
-    private static extern short GetAsyncKeyState(int vKey);
-#pragma warning restore SYSLIB1054 // Use 'LibraryImportAttribute' instead of 'DllImportAttribute' to generate P/Invoke marshalling code at compile time
-
 }

@@ -1,4 +1,5 @@
-﻿using NAudio.Wave;
+﻿using Microsoft.Extensions.Logging;
+using NAudio.Wave;
 using System.Reactive.Subjects;
 using VoiceBot2.Core.Abstractions;
 using VoiceBot2.Core.Model;
@@ -10,15 +11,16 @@ public sealed class NAudioSource : IAudioSource
     private readonly WaveInEvent _waveIn;
 
     private readonly ISubject<AudioFrame> _subject = Subject.Synchronize(new Subject<AudioFrame>());
-
+    private readonly ILogger<NAudioSource> _logger;
     public IObservable<AudioFrame> AudioStream => _subject;
 
-    public NAudioSource()
+    public NAudioSource(ILogger<NAudioSource> logger)
     {
+        _logger = logger;
         _waveIn = new WaveInEvent
         {
             WaveFormat = new WaveFormat(16000, 16, 1),
-            BufferMilliseconds = 20
+            BufferMilliseconds = 100
         };
 
         _waveIn.DataAvailable += (s, e) =>
@@ -33,12 +35,21 @@ public sealed class NAudioSource : IAudioSource
         };
     }
 
-    public void Start() => _waveIn.StartRecording();
-    public void Stop() => _waveIn.StopRecording();
+    public void Start()
+    {
+        _waveIn.StartRecording();
+        _logger.LogInformation("Audio recording started");
+    }
+
+    public void Stop()
+    {
+        _waveIn.StopRecording();
+        _logger.LogInformation("Audio recording stopped");
+    }
 
     public void Dispose()
     {
-        _waveIn.Dispose();
         _subject.OnCompleted();
+        _waveIn.Dispose();
     }
 }

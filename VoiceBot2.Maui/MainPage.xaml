@@ -13,11 +13,11 @@
                              Spacing="25">
             <tb:TaskbarIcon IconSource="{Binding IconPath}"
                             x:Name="TrayIcon"
-                            LeftClickCommand="{Binding ShowHideWindowCommand}"
+                            LeftClickCommand="{Binding ToggleActivationCommand}"
                             NoLeftClickDelay="True">
                 <FlyoutBase.ContextFlyout>
                     <MenuFlyout>
-                        <MenuFlyoutItem Command="{Binding ShowHideWindowCommand}"
+                        <MenuFlyoutItem Command="{Binding ToggleActivationCommand}"
                                         Text="Show/Hide Window" />
                         <MenuFlyoutSeparator />
                         <MenuFlyoutItem Command="{Binding ExitApplicationCommand}"
@@ -35,7 +35,7 @@
                         Stroke="White"
                         StrokeThickness="1">
 
-                    <Label Text="Mic input"
+                    <Label Text="{Binding LastVoiceSegment}"
                            TextColor="White"
                            HorizontalTextAlignment="Center"
                            VerticalTextAlignment="Center"

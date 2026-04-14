@@ -3,7 +3,9 @@ using System.Diagnostics;
 using System.Reactive.Concurrency;
 using System.Reactive.Disposables;
 using System.Reactive.Linq;
+using System.Reactive.Subjects;
 using VoiceBot2.Core.Abstractions;
+using VoiceBot2.Core.Commands;
 using VoiceBot2.Core.Model;
 using VoiceBot2.Core.SpeechToText;
 
@@ -24,13 +26,13 @@ public sealed class SpeechPipeline(
     private readonly ICommandHandler _commandHandler = commandHandler;
     private readonly ILogger<SpeechPipeline> _logger = logger;
 
-    private CompositeDisposable? _subscriptions;
+    private CompositeDisposable _subscriptions = [];
+    private readonly Subject<TimedResult> _timedResultSubject = new();
+    public IObservable<TimedResult> Voice => _timedResultSubject.AsObservable();
+
     public void Start()
     {
         _logger.LogInformation("Pipeline start");
-
-        _whisper.Load(WhisperModels.ModelMedium, "fr");
-        _logger.LogInformation("{TranscribeService} loaded", typeof(ITranscribeService).Name);
 
         var audioStream = _audio.AudioStream
             .Publish()
@@ -39,47 +41,54 @@ public sealed class SpeechPipeline(
         var segments = _audioSegmenter.Segment(
             audioStream,
             silenceDuration: TimeSpan.FromMilliseconds(400),
-            maxDuration: TimeSpan.FromSeconds(5));
+            maxDuration: TimeSpan.FromSeconds(4));
 
         var timedSegments = segments
             .Select(chunk => new TimedChunk(chunk, DateTime.UtcNow));
 
         var textStream = timedSegments
             .ObserveOn(TaskPoolScheduler.Default)
-            .Select(timedChunk =>
+            .Select(timedChunks =>
                 Observable.FromAsync(async () =>
                 {
                     var startProcessing = DateTime.UtcNow;
 
-                    var queueDelay = startProcessing - timedChunk.EnqueuedAt;
+                    var queueDelay = startProcessing - timedChunks.EnqueuedAt;
 
                     var sw = Stopwatch.StartNew();
 
-                    var result = await ProcessChunk(timedChunk.Chunk);
+                    var result = await ProcessChunk(timedChunks.Chunks);
 
                     sw.Stop();
 
-                    var endToEndLatency = DateTime.UtcNow - timedChunk.EnqueuedAt;
-
-                    return new TimedResult(
+                    var endToEndLatency = DateTime.UtcNow - timedChunks.EnqueuedAt;
+                    var r = new TimedResult(
                         result,
                         queueDelay,
                         sw.Elapsed,
                         endToEndLatency
                     );
+
+                    _timedResultSubject.OnNext(r);
+                    return r;
                 })
             )
             .Merge(2)
+            .Where(r =>
+            {
+                return r.Result.Text.TrimWithPunctuation().Length > 0;
+            })
             .Publish()
             .RefCount();
 
         // 🔍 Command stream (NEW)
         var commandStream = _commandDetector.DetectCommands(textStream);
         var s = _commandHandler.Handlers(commandStream);
-        // 📦 Subscriptions
+
+        // Subscriptions
         _subscriptions =
         [
-            // 🧾 Text logging stream
+            // Text logging stream
             textStream.Subscribe(x =>
             {
                 _logger.LogInformation(
@@ -104,15 +113,15 @@ public sealed class SpeechPipeline(
         ];
     }
 
-    private async Task<TranscriptionResult> ProcessChunk(IList<AudioFrame> chunk)
+    private async Task<TranscriptionResult> ProcessChunk(IList<AudioFrame> chunks)
     {
-        _logger.LogInformation("STT Processing chunk ({ChunckCount} frames)", chunk.Count);
+        var totalLength = chunks.Sum(f => f.Buffer.Length);
+        _logger.LogInformation("STT Processing chunk ({ChunckCount} frames, {ChunksSize} bytes)", chunks.Count, totalLength);
 
-        var totalLength = chunk.Sum(f => f.Buffer.Length);
         var buffer = new byte[totalLength];
 
         int offset = 0;
-        foreach (var chuckBuffer in chunk.Select(c => c.Buffer))
+        foreach (var chuckBuffer in chunks.Select(c => c.Buffer))
         {
             Buffer.BlockCopy(chuckBuffer, 0, buffer, offset, chuckBuffer.Length);
             offset += chuckBuffer.Length;
@@ -126,13 +135,20 @@ public sealed class SpeechPipeline(
     public void Stop()
     {
         _logger.LogInformation("Pipeline stopped");
-        _subscriptions?.Dispose();
+        _subscriptions.Dispose();
+        _subscriptions = [];
     }
 
     public async ValueTask DisposeAsync()
     {
-        _subscriptions?.Dispose();
+        _subscriptions.Dispose();
         _audio.Dispose();
         await _whisper.DisposeAsync();
+    }
+
+    public void LoadModel()
+    {
+        _whisper.Load(WhisperModels.ModelMedium, "fr");
+        _logger.LogInformation("{TranscribeService} loaded", typeof(ITranscribeService).Name);
     }
 }

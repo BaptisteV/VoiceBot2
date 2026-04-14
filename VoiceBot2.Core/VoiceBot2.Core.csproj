@@ -13,8 +13,10 @@
     <PackageReference Include="NAudio" Version="2.3.0" />
     <PackageReference Include="System.Reactive" Version="7.0.0-preview.1" />
     <PackageReference Include="System.Reactive.Linq" Version="6.1.0" />
-    <PackageReference Include="Whisper.net" Version="1.9.1-preview1" />
-    <PackageReference Include="Whisper.net.AllRuntimes" Version="1.9.1-preview1" />
+    <PackageReference Include="Vanara.PInvoke.Kernel32" Version="5.0.3" />
+    <PackageReference Include="Vanara.PInvoke.User32" Version="5.0.3" />
+    <PackageReference Include="Whisper.net" Version="1.9.0" />
+    <PackageReference Include="Whisper.net.AllRuntimes" Version="1.9.0" />
   </ItemGroup>
 
 </Project>
