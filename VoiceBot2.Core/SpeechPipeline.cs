@@ -41,7 +41,7 @@ public sealed class SpeechPipeline(
         var segments = _audioSegmenter.Segment(
             audioStream,
             silenceDuration: TimeSpan.FromMilliseconds(400),
-            maxDuration: TimeSpan.FromSeconds(4));
+            maxDuration: TimeSpan.FromSeconds(15));
 
         var timedSegments = segments
             .Select(chunk => new TimedChunk(chunk, DateTime.UtcNow));
@@ -92,10 +92,10 @@ public sealed class SpeechPipeline(
             textStream.Subscribe(x =>
             {
                 _logger.LogInformation(
-                    "TEXT={Text} | QUEUE={QueueDelay}ms | STT={ProcessingTime}ms | E2E={EndToEndLatency}ms",
+                    "STT={ProcessingTime}ms | TEXT={Text} | QUEUE={QueueDelay}ms | E2E={EndToEndLatency}ms",
+                    x.ProcessingTime.TotalMilliseconds.ToString("F0"),
                     x.Result.Text,
                     x.QueueDelay.TotalMilliseconds.ToString("F0"),
-                    x.ProcessingTime.TotalMilliseconds.ToString("F0"),
                     x.EndToEndLatency.TotalMilliseconds.ToString("F0")
                 );
             }, ex => _logger.LogError(ex, "TEXT STREAM ERROR")),

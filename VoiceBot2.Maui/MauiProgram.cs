@@ -9,8 +9,11 @@ using Whisper.net.Logger;
 
 namespace VoiceBot2.Maui;
 
-public static class MauiProgram
+internal class MauiProgram
 {
+    protected MauiProgram()
+    {
+    }
     public static MauiApp CreateMauiApp()
     {
         var builder = MauiApp.CreateBuilder();
@@ -21,7 +24,6 @@ public static class MauiProgram
                 fonts.AddFont("OpenSans-Regular.ttf", "OpenSansRegular");
                 fonts.AddFont("OpenSans-Semibold.ttf", "OpenSansSemibold");
             });
-        LogProvider.AddConsoleLogging(WhisperLogLevel.Debug);
         builder.Logging.AddDebug();
         builder.Logging.SetMinimumLevel(LogLevel.Debug);
         builder.Services.AddSingleton<MainPageViewModel>();
@@ -30,11 +32,13 @@ public static class MauiProgram
         var services = builder.Services;
         services.AddServices();
         var h = builder.Services.BuildServiceProvider();
-        var wLogger = h.GetRequiredService<ILogger<object>>();
+        var wLogger = h.GetRequiredService<ILogger<MauiProgram>>();
+        //LogProvider.AddConsoleLogging(WhisperLogLevel.Debug);
         LogProvider.AddLogger((l, a) =>
         {
             wLogger.Log((LogLevel)l, a);
         });
+
         /*builder.ConfigureLifecycleEvents(events =>
         {
             var h = builder.Services.BuildServiceProvider();

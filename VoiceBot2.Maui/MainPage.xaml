@@ -26,11 +26,23 @@
                 </FlyoutBase.ContextFlyout>
             </tb:TaskbarIcon>
             <Grid Padding="13,8"
-                  RowDefinitions="90,90"
-                  ColumnDefinitions="134,*">
+                  RowDefinitions="240,120,120"
+                  ColumnDefinitions="*,*">
 
-                <!-- Voice label (top full width) -->
+                <!-- Voice history -->
                 <Border Grid.Row="0"
+                        Grid.ColumnSpan="2"
+                        Stroke="White"
+                        StrokeThickness="1">
+
+                    <Label Text="{Binding FullVoice}"
+                           TextColor="White"
+                           HorizontalTextAlignment="Center"
+                           VerticalTextAlignment="Center"
+                           FontSize="18" />
+                </Border>
+                <!-- Voice label (top full width) -->
+                <Border Grid.Row="1"
                         Grid.ColumnSpan="2"
                         Stroke="White"
                         StrokeThickness="1">
@@ -43,7 +55,7 @@
                 </Border>
 
                 <!-- Command type -->
-                <Border Grid.Row="1"
+                <Border Grid.Row="2"
                         Grid.Column="0"
                         Stroke="White"
                         StrokeThickness="1">
@@ -55,7 +67,7 @@
                 </Border>
 
                 <!-- Command args -->
-                <Border Grid.Row="1"
+                <Border Grid.Row="2"
                         Grid.Column="1"
                         Stroke="White"
                         StrokeThickness="1">

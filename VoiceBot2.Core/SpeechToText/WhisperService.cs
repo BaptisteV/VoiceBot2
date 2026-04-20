@@ -11,7 +11,7 @@ public sealed class WhisperService(ILogger<WhisperService> logger) : ITranscribe
 {
     private WhisperProcessor? _processor;
     private readonly ILogger<WhisperService> _logger = logger;
-    private readonly SemaphoreSlim _semaphore = new(1, 1);
+
     public async Task<string> TranscribeAsync(byte[] pcmData)
     {
         await using var ms = new MemoryStream();
@@ -38,14 +38,14 @@ public sealed class WhisperService(ILogger<WhisperService> logger) : ITranscribe
             //.WithPrintResults()
             .WithPrompt("Transcription fidèle de la parole humaine uniquement. Ignore les bruits de fond, la musique, les respirations et tout son non verbal. Ne transcris que les mots clairement prononcés par une personne.")
             .WithCarryInitialPrompt(true)
-            .SplitOnWord()
+            //.SplitOnWord()
             //.WithNoSpeechThreshold(1.0f)
             .WithLanguage(language)
             .WithNoContext()
-            .WithSingleSegment()
+            //.WithSingleSegment()
             //.WithProgressHandler(ProgressHandler)
-            .WithTemperature(0.2f)
-            .WithSegmentEventHandler(SegHandler)
+            //.WithTemperature(0.2f)
+            //.WithSegmentEventHandler(SegHandler)
             .Build();
     }
 
@@ -56,7 +56,6 @@ public sealed class WhisperService(ILogger<WhisperService> logger) : ITranscribe
 
     public async ValueTask DisposeAsync()
     {
-        _semaphore.Dispose();
         await _processor!.DisposeAsync();
     }
 }
