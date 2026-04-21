@@ -5,11 +5,14 @@ using System.Reactive.Disposables;
 using System.Reactive.Linq;
 using System.Reactive.Subjects;
 using VoiceBot2.Core.Abstractions;
+using VoiceBot2.Core.Audio;
 using VoiceBot2.Core.Commands;
 using VoiceBot2.Core.Model;
 using VoiceBot2.Core.SpeechToText;
 
 namespace VoiceBot2.Core;
+
+public record TimedChunk(byte[] Pcm, AudioSegment Segment, DateTime EnqueuedAt);
 
 public sealed class SpeechPipeline(
     IAudioSource audio,
@@ -46,39 +49,40 @@ public sealed class SpeechPipeline(
             SubscribeCommandHandling(handlerStream),
         ];
     }
-
     private IObservable<TimedResult> BuildTextStream()
     {
         var audioStream = _audio.AudioStream.Publish().RefCount();
         var segments = BuildSegments(audioStream);
 
         return segments
-            .Select(chunk => new TimedChunk(chunk, DateTime.UtcNow))
+    .StitchBoundaries(() => _carryOver)
+            .Select(pair => new TimedChunk(pair.Pcm, pair.Segment, DateTime.UtcNow))
             .ObserveOn(TaskPoolScheduler.Default)
             .Select(timedChunk => Observable.FromAsync(() => TranscribeChunk(timedChunk)))
             .Merge(2)
             .Publish()
             .RefCount();
     }
-
-    private IObservable<IList<AudioFrame>> BuildSegments(IObservable<AudioFrame> audioStream)
+    private IObservable<AudioSegment> BuildSegments(IObservable<AudioFrame> audioStream)
     {
         return _audioSegmenter
             .Segment(audioStream,
                 silenceDuration: TimeSpan.FromMilliseconds(400),
                 maxDuration: TimeSpan.FromSeconds(5))
             .Scan(
-                seed: (Buffer: new List<AudioFrame>(), Ready: (IList<AudioFrame>?)null),
+                seed: (Buffer: new List<AudioFrame>(), Ready: (AudioSegment?)null),
                 accumulator: (state, segment) =>
                 {
-                    var merged = state.Buffer.Concat(segment).ToList();
-                    return merged.Count >= 25
-                        ? (Buffer: new List<AudioFrame>(), Ready: merged)
+                    var merged = state.Buffer.Concat(segment.Frames).ToList();
+                    return merged.Count >= 50
+                        ? (Buffer: new List<AudioFrame>(), Ready: new AudioSegment(merged, segment.Reason))
                         : (Buffer: merged, Ready: null);
                 })
             .Where(state => state.Ready is not null)
             .Select(state => state.Ready!);
     }
+
+    private byte[] _carryOver = [];
 
     private async Task<TimedResult> TranscribeChunk(TimedChunk timedChunk)
     {
@@ -86,8 +90,15 @@ public sealed class SpeechPipeline(
         var queueDelay = startProcessing - timedChunk.EnqueuedAt;
         var sw = Stopwatch.StartNew();
 
-        var result = await ProcessChunk(timedChunk.Chunks);
+        _logger.LogInformation("STT Processing chunk ({FrameCount} frames)", timedChunk.Segment.Frames.Count);
+        var transcription = await _whisper.TranscribeAsync(timedChunk.Pcm);
 
+        // Decide whether to carry tail bytes into the next chunk
+        _carryOver = BoundaryStitcher.ExtractCarryOver(timedChunk.Pcm, transcription, timedChunk.Segment.Reason);
+        if (_carryOver.Length > 0)
+            _logger.LogDebug("Carrying over {Bytes} bytes to next chunk to avoid mid-word cut", _carryOver.Length);
+
+        var result = new TranscriptionResult(transcription, DateTime.UtcNow);
         var r = new TimedResult(result, queueDelay, sw.Elapsed, DateTime.UtcNow - timedChunk.EnqueuedAt);
         _timedResultSubject.OnNext(r);
         return r;

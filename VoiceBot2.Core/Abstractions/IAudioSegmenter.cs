@@ -1,8 +1,9 @@
-﻿using VoiceBot2.Core.Model;
+﻿using VoiceBot2.Core.Audio;
+using VoiceBot2.Core.Model;
 
 namespace VoiceBot2.Core.Abstractions;
 
 public interface IAudioSegmenter
 {
-    IObservable<IList<AudioFrame>> Segment(IObservable<AudioFrame> audioStream, TimeSpan silenceDuration, TimeSpan maxDuration);
+    IObservable<AudioSegment> Segment(IObservable<AudioFrame> audioStream, TimeSpan silenceDuration, TimeSpan maxDuration);
 }

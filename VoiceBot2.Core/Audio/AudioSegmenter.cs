@@ -5,15 +5,19 @@ using VoiceBot2.Core.Model;
 
 namespace VoiceBot2.Core.Audio;
 
+public enum SegmentFlushReason { Silence, MaxDuration, StreamEnd }
+
+public record AudioSegment(IList<AudioFrame> Frames, SegmentFlushReason Reason);
+
 public class AudioSegmenter(ILogger<AudioSegmenter> logger) : IAudioSegmenter
 {
     private readonly ILogger<AudioSegmenter> _logger = logger;
-    public IObservable<IList<AudioFrame>> Segment(
+    public IObservable<AudioSegment> Segment(
         IObservable<AudioFrame> audioStream,
         TimeSpan silenceDuration,
         TimeSpan maxDuration)
     {
-        return Observable.Create<IList<AudioFrame>>(observer =>
+        return Observable.Create<AudioSegment>(observer =>
         {
             var state = new SegmentState(silenceDuration, maxDuration, _logger);
 
@@ -27,7 +31,7 @@ public class AudioSegmenter(ILogger<AudioSegmenter> logger) : IAudioSegmenter
                 onError: observer.OnError,
                 onCompleted: () =>
                 {
-                    var remaining = state.Flush();
+                    var remaining = state.Flush(SegmentFlushReason.StreamEnd);
                     if (remaining is not null)
                         observer.OnNext(remaining);
                     observer.OnCompleted();
