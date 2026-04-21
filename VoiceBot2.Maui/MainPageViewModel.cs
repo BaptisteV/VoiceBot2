@@ -16,7 +16,7 @@ public class AppendVoiceObserver : IObserver<TimedResult>
 
     private void LimitToLast1000()
     {
-        while (_recentResults.Sum(r => r.Result.Text.Length) > 1000)
+        while (_recentResults.Sum(r => r.Result.Segments.Sum(s => s.Text.Length)) > 1000)
         {
             _recentResults.RemoveAt(0);
         }
@@ -28,13 +28,12 @@ public class AppendVoiceObserver : IObserver<TimedResult>
         LimitToLast1000();
     }
 
-    public string GetBuffer() => string.Concat(_recentResults.SelectMany(r => r.Result.Text));
+    public string GetBuffer() => string.Concat(_recentResults.SelectMany(r => r.Result.Segments.ConcatenatedText));
 }
 
 public sealed partial class MainPageViewModel : ObservableObject
 {
     private readonly ISpeechPipeline _pipeline;
-    private readonly IAudioSource _audio;
     private readonly AppendVoiceObserver _voiceObserver = new();
 
     public MainPageViewModel(ISpeechPipeline pipeline, IAudioSource audio)
@@ -47,10 +46,9 @@ public sealed partial class MainPageViewModel : ObservableObject
             .ObserveOn(SynchronizationContext.Current!)
             .Subscribe(result =>
             {
-                LastVoiceSegment = result.Result.Text;
+                LastVoiceSegment = result.Result.Segments.ConcatenatedText;
                 FullVoice = _voiceObserver.GetBuffer();
             });
-        _audio = audio;
     }
 
     public void LoadModel() => _pipeline.LoadModel();
@@ -96,7 +94,6 @@ public sealed partial class MainPageViewModel : ObservableObject
             IconPath = "on.ico";
             window.Show();
             _pipeline.Start();
-            _audio.Start();
         });
     }
 
@@ -106,7 +103,6 @@ public sealed partial class MainPageViewModel : ObservableObject
         {
             IconPath = "off.ico";
             window.Hide();
-            _audio.Stop();
             _pipeline.Stop();
         });
     }

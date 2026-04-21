@@ -1,6 +1,7 @@
 ﻿using Microsoft.Extensions.Logging;
 using NAudio.Utils;
 using NAudio.Wave;
+using System.Diagnostics;
 using VoiceBot2.Core.Abstractions;
 using Whisper.net;
 using Whisper.net.LibraryLoader;
@@ -12,8 +13,11 @@ public sealed class WhisperService(ILogger<WhisperService> logger) : ITranscribe
     private WhisperProcessor? _processor;
     private readonly ILogger<WhisperService> _logger = logger;
 
-    public async Task<string> TranscribeAsync(byte[] pcmData)
+    public async Task<List<SegmentData>> TranscribeAsync(byte[] pcmData)
     {
+        var guid = Guid.NewGuid();
+        var sw = Stopwatch.StartNew();
+        _logger.LogInformation("{Guid} Starting transcription of {Count} bytes", guid, pcmData.Length);
         await using var ms = new MemoryStream();
         await using var writer = new WaveFileWriter(new IgnoreDisposeStream(ms), new WaveFormat(16000, 16, 1));
 
@@ -21,8 +25,9 @@ public sealed class WhisperService(ILogger<WhisperService> logger) : ITranscribe
         await writer.FlushAsync();
         ms.Seek(0, SeekOrigin.Begin);
         var segments = await _processor!.ProcessAsync(ms).ToListAsync();
-        var speechSegments = segments.Where(s => s.NoSpeechProbability > 2.0E-06).Select(r => r.Text);
-        return string.Concat(speechSegments);
+        var elapsed = sw.Elapsed;
+        _logger.LogInformation("{Guid} Finished transcription of {Count} bytes done in {Timestamp}", guid, pcmData.Length, elapsed);
+        return segments.Where(s => s.NoSpeechProbability > 2.0E-06).ToList();
     }
 
     public void Load(string modelPath, string language)
@@ -37,11 +42,11 @@ public sealed class WhisperService(ILogger<WhisperService> logger) : ITranscribe
             //.WithPrintProgress()
             //.WithPrintResults()
             .WithPrompt("Transcription fidèle de la parole humaine uniquement. Ignore les bruits de fond, la musique, les respirations et tout son non verbal. Ne transcris que les mots clairement prononcés par une personne.")
-            .WithCarryInitialPrompt(true)
-            //.SplitOnWord()
+            //.WithCarryInitialPrompt(true)
+            .SplitOnWord()
             //.WithNoSpeechThreshold(1.0f)
             .WithLanguage(language)
-            .WithNoContext()
+            //.WithNoContext()
             //.WithSingleSegment()
             //.WithProgressHandler(ProgressHandler)
             //.WithTemperature(0.2f)

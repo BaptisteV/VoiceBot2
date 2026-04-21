@@ -8,24 +8,28 @@ namespace VoiceBot2.Core.Audio;
 public class AudioSegmenter(ILogger<AudioSegmenter> logger) : IAudioSegmenter
 {
     private readonly ILogger<AudioSegmenter> _logger = logger;
-
     public IObservable<IList<AudioFrame>> Segment(
-            IObservable<AudioFrame> audioStream,
-            TimeSpan silenceDuration,
-            TimeSpan maxDuration)
+    IObservable<AudioFrame> audioStream,
+    TimeSpan silenceDuration,
+    TimeSpan maxDuration)
     {
         return Observable.Create<IList<AudioFrame>>(observer =>
         {
-            var speechFrames = new List<AudioFrame>();       // frames to emit
-            var silenceFrames = new List<AudioFrame>();      // trailing silence accumulator
+            var speechFrames = new List<AudioFrame>();
+            var silenceFrames = new List<AudioFrame>();
             TimeSpan accumulatedSpeech = TimeSpan.Zero;
             TimeSpan accumulatedSilence = TimeSpan.Zero;
 
             void FlushSegment()
             {
-                if (speechFrames.Count == 0 && silenceFrames.Count == 0) return;
+                // Don't emit if there's no speech content, just discard accumulated silence
+                if (speechFrames.Count == 0)
+                {
+                    silenceFrames.Clear();
+                    accumulatedSilence = TimeSpan.Zero;
+                    return;
+                }
 
-                // Include trailing silence in the emitted segment
                 var segment = speechFrames.Concat(silenceFrames).ToList();
                 speechFrames.Clear();
                 silenceFrames.Clear();
@@ -40,36 +44,33 @@ public class AudioSegmenter(ILogger<AudioSegmenter> logger) : IAudioSegmenter
                 onNext: frame =>
                 {
                     var frameDuration = TimeSpan.FromSeconds(
-                        frame.Buffer.Length / 2.0 / frame.SampleRate); // 16-bit = 2 bytes/sample
+                        frame.Buffer.Length / 2.0 / frame.SampleRate);
 
                     if (IsSilence(frame.Buffer))
                     {
                         if (speechFrames.Count == 0)
-                        {
-                            // Leading silence — discard, we haven't started a segment yet
-                            return;
-                        }
+                            return; // leading silence, discard
+
+                        if (accumulatedSilence == TimeSpan.Zero)
+                            _logger.LogDebug("Entering silence");
 
                         silenceFrames.Add(frame);
                         accumulatedSilence += frameDuration;
 
                         if (accumulatedSilence >= silenceDuration)
                         {
-                            // Enough silence to close the segment
-                            _logger.LogDebug("Silence threshold reached after {SilenceDuration:F2}s, flushing segment", accumulatedSilence.TotalSeconds);
-
+                            _logger.LogInformation("Silence threshold reached after {SilenceDuration:F2}s, flushing segment", accumulatedSilence.TotalSeconds);
                             FlushSegment();
                         }
                     }
                     else
                     {
-                        // Log once on silence exit (i.e. silence was accumulating but speech resumed)
                         if (accumulatedSilence > TimeSpan.Zero)
-                            _logger.LogDebug("Exiting silence after {SilenceDuration:F2}s, resuming segment", accumulatedSilence.TotalSeconds);
+                            _logger.LogInformation("Exiting silence after {SilenceDuration:F2}s, resuming segment", accumulatedSilence.TotalSeconds);
 
-                        // Active speech — absorb any pending silence back into the segment
+                        // Absorb pending silence back into speech
                         speechFrames.AddRange(silenceFrames);
-                        accumulatedSpeech += accumulatedSilence; // count reclaimed silence as speech time
+                        accumulatedSpeech += accumulatedSilence;
                         silenceFrames.Clear();
                         accumulatedSilence = TimeSpan.Zero;
 
@@ -78,7 +79,6 @@ public class AudioSegmenter(ILogger<AudioSegmenter> logger) : IAudioSegmenter
 
                         if (accumulatedSpeech >= maxDuration)
                         {
-                            // Hard cap reached — emit immediately and start fresh
                             _logger.LogInformation("maxDuration reached, forcing segment flush");
                             FlushSegment();
                         }
@@ -87,20 +87,20 @@ public class AudioSegmenter(ILogger<AudioSegmenter> logger) : IAudioSegmenter
                 onError: observer.OnError,
                 onCompleted: () =>
                 {
-                    // Flush whatever is left when the stream ends
                     FlushSegment();
                     observer.OnCompleted();
                 });
         });
     }
 
-    private static bool IsSilence(byte[] buffer, double threshold = 0.1)
+    private static bool IsSilence(byte[] buffer, double threshold = 0.075)
     {
         var (_, rms) = ComputeVolume(buffer);
         if (rms < threshold)
             return true;
         return false;
     }
+
     private static (double Volume, double RmsVolume) ComputeVolume(byte[] pcmData)
     {
         int sampleCount = pcmData.Length / 2; // 16-bit = 2 bytes per sample

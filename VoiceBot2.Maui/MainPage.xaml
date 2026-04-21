@@ -37,9 +37,9 @@
 
                     <Label Text="{Binding FullVoice}"
                            TextColor="White"
-                           HorizontalTextAlignment="Center"
-                           VerticalTextAlignment="Center"
-                           FontSize="18" />
+                           HorizontalTextAlignment="Justify"
+                           VerticalTextAlignment="Start"
+                           FontSize="14" />
                 </Border>
                 <!-- Voice label (top full width) -->
                 <Border Grid.Row="1"

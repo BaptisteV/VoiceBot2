@@ -25,7 +25,7 @@ public sealed class NAudioSource : IAudioSource
 
         _waveIn.DataAvailable += (s, e) =>
         {
-            // Buffer is typically of size 3200 bytes
+            // BufferMilliseconds 100 => e.BytesRecorded = 3200
             var buffer = new byte[e.BytesRecorded];
             Buffer.BlockCopy(e.Buffer, 0, buffer, 0, e.BytesRecorded);
 

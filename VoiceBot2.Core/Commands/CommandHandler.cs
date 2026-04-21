@@ -23,7 +23,7 @@ public class CommandHandler(ILogger<CommandHandler> logger) : ICommandHandler
 
         if (task is null)
         {
-            _logger.LogWarning("Unable to handle command of type {CommandType}: {CommandText}", cmd.Type, cmd.Source.Result.Text);
+            _logger.LogWarning("Unable to handle command of type {CommandType}: {CommandText}", cmd.Type, cmd.Source.Result.Segments);
             task = Task.CompletedTask;
         }
 

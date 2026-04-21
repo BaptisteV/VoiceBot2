@@ -31,7 +31,7 @@ public partial class BufferedCommandDetector : ICommandDetector
 
         public BufferState Append(TimedResult input)
         {
-            var text = input.Result.Text?.TrimWithPunctuation();
+            var text = input.Result.Segments.ConcatenatedText;
             if (string.IsNullOrWhiteSpace(text))
                 return this;
 

@@ -5,7 +5,6 @@ using System.Reactive.Disposables;
 using System.Reactive.Linq;
 using System.Reactive.Subjects;
 using VoiceBot2.Core.Abstractions;
-using VoiceBot2.Core.Commands;
 using VoiceBot2.Core.Model;
 using VoiceBot2.Core.SpeechToText;
 
@@ -32,16 +31,28 @@ public sealed class SpeechPipeline(
 
     public void Start()
     {
+        _audio.Start();
         _logger.LogInformation("Pipeline start");
-
         var audioStream = _audio.AudioStream
             .Publish()
             .RefCount();
 
         var segments = _audioSegmenter.Segment(
-            audioStream,
-            silenceDuration: TimeSpan.FromMilliseconds(400),
-            maxDuration: TimeSpan.FromSeconds(15));
+                audioStream,
+                silenceDuration: TimeSpan.FromMilliseconds(400),
+                maxDuration: TimeSpan.FromSeconds(5))
+            .Scan(
+                seed: (Buffer: new List<AudioFrame>(), Ready: (IList<AudioFrame>?)null),
+                accumulator: (state, segment) =>
+                {
+                    var merged = state.Buffer.Concat(segment).ToList();
+                    if (merged.Count >= 50)
+                        return (Buffer: new List<AudioFrame>(), Ready: merged);
+                    else
+                        return (Buffer: merged, Ready: null);
+                })
+            .Where(state => state.Ready is not null)
+            .Select(state => state.Ready!);
 
         var timedSegments = segments
             .Select(chunk => new TimedChunk(chunk, DateTime.UtcNow));
@@ -52,9 +63,7 @@ public sealed class SpeechPipeline(
                 Observable.FromAsync(async () =>
                 {
                     var startProcessing = DateTime.UtcNow;
-
                     var queueDelay = startProcessing - timedChunks.EnqueuedAt;
-
                     var sw = Stopwatch.StartNew();
 
                     var result = await ProcessChunk(timedChunks.Chunks);
@@ -74,27 +83,20 @@ public sealed class SpeechPipeline(
                 })
             )
             .Merge(2)
-            .Where(r =>
-            {
-                return r.Result.Text.TrimWithPunctuation().Length > 0;
-            })
             .Publish()
             .RefCount();
 
-        // 🔍 Command stream (NEW)
         var commandStream = _commandDetector.DetectCommands(textStream);
         var s = _commandHandler.Handlers(commandStream);
 
-        // Subscriptions
         _subscriptions =
         [
-            // Text logging stream
             textStream.Subscribe(x =>
             {
                 _logger.LogInformation(
                     "STT={ProcessingTime}ms | TEXT={Text} | QUEUE={QueueDelay}ms | E2E={EndToEndLatency}ms",
                     x.ProcessingTime.TotalMilliseconds.ToString("F0"),
-                    x.Result.Text,
+                    x.Result.Segments.ConcatenatedText,
                     x.QueueDelay.TotalMilliseconds.ToString("F0"),
                     x.EndToEndLatency.TotalMilliseconds.ToString("F0")
                 );
@@ -102,38 +104,28 @@ public sealed class SpeechPipeline(
 
             commandStream.Subscribe(cmd =>
             {
-                _logger.LogInformation("COMMAND DETECTED: {CommandText}", cmd.Source.Result.Text);
+                _logger.LogInformation("COMMAND DETECTED: {CommandText}", cmd.Source.Result.Segments);
             }, ex => _logger.LogError(ex, "COMMAND STREAM ERROR")),
 
-            s.Subscribe(async (h) =>
+            s.Subscribe(async h =>
             {
                 await h.Run;
-                _logger.LogInformation("COMMAND HANDLED: {CommandText}", h.Result.Source.Result.Text);
+                _logger.LogInformation("COMMAND HANDLED: {CommandText}", h.Result.Source.Result.Segments);
             }, ex => _logger.LogError(ex, "COMMAND HANDLER ERROR")),
         ];
     }
-
     private async Task<TranscriptionResult> ProcessChunk(IList<AudioFrame> chunks)
     {
-        var totalLength = chunks.Sum(f => f.Buffer.Length);
-        _logger.LogInformation("STT Processing chunk ({ChunckCount} frames, {ChunksSize} bytes)", chunks.Count, totalLength);
+        _logger.LogInformation("STT Processing chunk ({ChunckCount} frames)", chunks.Count);
 
-        var buffer = new byte[totalLength];
-
-        int offset = 0;
-        foreach (var chuckBuffer in chunks.Select(c => c.Buffer))
-        {
-            Buffer.BlockCopy(chuckBuffer, 0, buffer, offset, chuckBuffer.Length);
-            offset += chuckBuffer.Length;
-        }
-
-        var text = await _whisper.TranscribeAsync(buffer);
+        var text = await _whisper.TranscribeAsync(chunks.SelectMany(c => c.Buffer).ToArray());
 
         return new TranscriptionResult(text, DateTime.UtcNow);
     }
 
     public void Stop()
     {
+        _audio.Stop();
         _logger.LogInformation("Pipeline stopped");
         _subscriptions.Dispose();
         _subscriptions = [];
@@ -148,7 +140,7 @@ public sealed class SpeechPipeline(
 
     public void LoadModel()
     {
-        _whisper.Load(WhisperModels.ModelMedium, "fr");
+        _whisper.Load(WhisperModels.ModelSmall, "fr");
         _logger.LogInformation("{TranscribeService} loaded", typeof(ITranscribeService).Name);
     }
 }
